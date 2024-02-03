@@ -1,7 +1,6 @@
 #include <bits/stdc++.h>
 #include <fstream>
 #include "constants.h"
-#include <pthread.h>
 using namespace std;
 
 vector<int> pi(N, 0);
@@ -30,6 +29,7 @@ void initOutputs(){
     for(int i = 0; i < N; i++){
         for(int j = 0; j < N; j++){
             U[i][j] = A[i][j];
+            L[i][j] = A[i][j];
             temp_A[i][j] = A[i][j];
         }
     }
@@ -59,7 +59,7 @@ void LUdecompose(){
                 temp_k = i;
             }
         }
-        if(maxi == 0){
+        if(maxi == 0.0){
             perror("Singular matrix");
         }
         swap(pi[k], pi[temp_k]);

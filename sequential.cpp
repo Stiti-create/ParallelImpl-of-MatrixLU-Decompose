@@ -7,7 +7,11 @@ vector<int> pi(N, 0);
 vector<vector<double>> A(N, vector<double>(N, 0.0));
 vector<vector<double>> L(N, vector<double>(N, 0.0));
 vector<vector<double>> U(N, vector<double>(N, 0.0));
-vector<vector<int>> P(N, vector<int>(N, 0.0));
+vector<vector<int>> P(N, vector<int>(N, 0));
+vector<vector<double>> PA(N, vector<double>(N, 0.0));
+vector<vector<double>> LU(N, vector<double>(N, 0.0));
+vector<vector<double>> residual(N, vector<double>(N, 0.0));
+vector<vector<double>> temp_A(N, vector<double>(N, 0.0));
 
 void inputMatrix(){
     ifstream fin;
@@ -23,18 +27,23 @@ void inputMatrix(){
 
 void initOutputs(){
     for(int i = 0; i < N; i++){
-        pi[i] = i;
-        L[i][i] = 1;
+        for(int j = 0; j < N; j++){
+            U[i][j] = A[i][j];
+            temp_A[i][j] = A[i][j];
+        }
     }
     for(int i = 0; i < N; i++){
-        for(int j = 0; j < N; j++){
+        pi[i] = i;
+        L[i][i] = 1.0;
+    }
+    for(int i=0; i<N; i++){
+        for(int j=0; j<N; j++){
             if(i>j){
                 U[i][j] = 0;
             }
             if(i<j){
                 L[i][j] = 0;
             }
-            P[i][j] = 0;
         }
     }
 }
@@ -44,8 +53,8 @@ void LUdecompose(){
         double maxi = 0.0;
         int temp_k = k;
         for (int i=k; i<N; i++){
-            if (maxi < abs(A[i][k])){
-                maxi = abs(A[i][k]);
+            if (maxi < temp_A[i][k]){
+                maxi = temp_A[i][k];
                 temp_k = i;
             }
         }
@@ -53,34 +62,33 @@ void LUdecompose(){
             perror("Singular matrix");
         }
         swap(pi[k], pi[temp_k]);
-        A[k].swap(A[temp_k]);
+        temp_A[k].swap(temp_A[temp_k]);
         for(int i=0; i<k; i++){
             swap(L[k][i], L[temp_k][i]);
         }
-        U[k][k] = A[k][k];
+        U[k][k] = temp_A[k][k];
         for(int i=k+1; i<N; i++){
-            L[i][k] = A[i][k]/U[k][k];
-            U[k][i] = A[k][i];
+            L[i][k] = (temp_A[i][k]*1.0)/U[k][k];
+            U[k][i] = temp_A[k][i];
         }
         for(int i=k+1; i<N; i++){
             for(int j=k+1; j<N; j++){
-                A[i][j] -= L[i][k]*U[k][j];
+                temp_A[i][j] -= L[i][k]*U[k][j];
             }
         }
     }
 
     for(int i=0; i<N; i++){
-        int j = pi[i];
-        P[i][j] = 1;
+        P[i][pi[i]] = 1;
     }
+    return;
 }
 
 void verifyLU(){
-    vector<vector<double>> PA(N, vector<double>(N, 0.0));
-    vector<vector<double>> LU(N, vector<double>(N, 0.0));
-    vector<vector<double>> residual(N, vector<double>(N, 0.0));
     for(int i=0; i<N; i++){
         for(int j=0; j<N; j++){
+            PA[i][j] = 0.0;
+            LU[i][j] = 0.0;
             for(int k=0; k<N; k++){
                 PA[i][j] += P[i][k]*A[k][j];
                 LU[i][j] += L[i][k]*U[k][j];

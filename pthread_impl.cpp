@@ -71,8 +71,8 @@ void *LUdecompose_work_parallel(void* pthread_args){
         swap(temp_A[k][i], temp_A[temp_k][i]);
     }
     
-    int l_2 = (int)(ceil(k/(1.0*PTHREAD_COUNT)))*(id);
-    int r_2 = (int)(ceil(k/(1.0*PTHREAD_COUNT)))*(id+1);
+    int l_2 = (int)(ceil(k/(1.0*PTHREAD_COUNT)))*(id); //TODO: correct this
+    int r_2 = (int)(ceil(k/(1.0*PTHREAD_COUNT)))*(id+1); //TODO: correct this
     if(id == PTHREAD_COUNT-1){
         r_2 = k;
     }
@@ -161,6 +161,7 @@ void LUdecompose(){
     double time_taken = chrono::duration_cast<chrono::milliseconds>(end_time - start_time).count();
     ofstream fout;
     fout.open(LOG_OUT_FILE, ios::app);
+    fout << "-----------------------------------------------\n";
     fout << "N: " << N << ", Parallel (pthread): " << time_taken << " ms" << endl;
     fout.close();
     return;

@@ -20,8 +20,6 @@ struct pthread_args{
     int k;
     int thread_id;
     int temp_k;
-    int left_bound;
-    int right_bound;
 };
 
 void inputMatrix(){
@@ -60,34 +58,47 @@ void initOutputs(){
     }
 }
 
+pair<int,int> getBounds(int id, int num_threads, int num_iter){
+    int q = num_iter/num_threads;
+    int c = int(ceil(num_iter/(1.0*num_threads)));
+    int r = num_iter%num_threads;
+    int base = r*c;
+    if(id<r){
+        return {id*c, (id+1)*c};
+    }
+    else{
+        return {base+(id-r)*q, base+(id+1-r)*q};
+    }
+}
+
 void *LUdecompose_work_parallel(void* pthread_args){
     struct pthread_args* args = (struct pthread_args*)pthread_args;
     int k = args->k;
     int temp_k = args->temp_k;
     int id = args->thread_id;
-    int l_1 = args->left_bound;
-    int r_1 = args->right_bound;
+    pair<int,int> bounds = getBounds(id, PTHREAD_COUNT, N);
+    int l_1 = bounds.first;
+    int r_1 = bounds.second;
     for(int i=l_1; i<r_1; i++){
         swap(temp_A[k][i], temp_A[temp_k][i]);
     }
     
-    int l_2 = (int)(ceil(k/(1.0*PTHREAD_COUNT)))*(id); //TODO: correct this
-    int r_2 = (int)(ceil(k/(1.0*PTHREAD_COUNT)))*(id+1); //TODO: correct this
-    if(id == PTHREAD_COUNT-1){
-        r_2 = k;
-    }
+    pair<int,int> bounds_2 = getBounds(id, PTHREAD_COUNT, k);
+    int l_2 = bounds_2.first;
+    int r_2 = bounds_2.second;
     for(int j=l_2; j<r_2; j++){
         swap(L[k][j], L[temp_k][j]);
-    }
-
-    int l_3 = k+1 + (int)(ceil((N-k-1)/(1.0*PTHREAD_COUNT)))*(id); // TODO: correct this
-    int r_3 = k+1 + (int)(ceil((N-k-1)/(1.0*PTHREAD_COUNT)))*(id+1); //TODO: correct this
-    if(id == PTHREAD_COUNT-1){
-        r_3 = N;
     }
     #ifdef DEBUG
         ofstream fout;
         fout.open(DEBUG_OUT_FILE, ios::app);
+        fout << "Thread " << id  << " k: " << k << " l_2: " << l_2 << " r_2: " << r_2 << endl;
+    #endif
+
+    pair<int,int> bounds_3 = getBounds(id, PTHREAD_COUNT, N-k-1);
+    int l_3 = k+1 + bounds_3.first;
+    int r_3 = k+1 + bounds_3.second;
+    #ifdef DEBUG
         fout << "Thread " << id  << " k: " << k << " l_3: " << l_3 << " r_3: " << r_3 << endl;
     #endif
     for(int ind=l_3; ind<r_3; ind++){
@@ -123,11 +134,6 @@ void LUdecompose(){
         for(int num = 0; num < PTHREAD_COUNT; num++){
             args[num].k = k;
             args[num].thread_id = num;
-            args[num].left_bound = (N/PTHREAD_COUNT)*num;
-            args[num].right_bound = (N/PTHREAD_COUNT)*(num+1);
-            if(num == PTHREAD_COUNT-1){
-                args[num].right_bound = N;
-            }
             args[num].temp_k = temp_k;
             pthread_create(&threads[num], NULL, &LUdecompose_work_parallel, (void*)&args[num]);
         }

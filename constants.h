@@ -5,4 +5,4 @@
 #define DEBUG_LU_VERIFY 1
 #define LOG_OUT_FILE "log.txt"
 #define PTHREAD_COUNT 4
-#define DEBUG 1
+// #define DEBUG 1

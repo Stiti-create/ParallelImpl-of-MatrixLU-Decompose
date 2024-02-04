@@ -15,6 +15,8 @@ vector<vector<double>> PA(N, vector<double>(N, 0.0));
 vector<vector<double>> LU(N, vector<double>(N, 0.0));
 vector<vector<double>> residual(N, vector<double>(N, 0.0));
 vector<vector<double>> temp_A(N, vector<double>(N, 0.0));
+pthread_mutex_t lock_1;
+pthread_mutex_t lock_2;
 
 struct pthread_args{
     int k;
@@ -71,18 +73,11 @@ pair<int,int> getBounds(int id, int num_threads, int num_iter){
     }
 }
 
-void *LUdecompose_work_parallel(void* pthread_args){
+void *parallel_swap_LU(void* pthread_args){
     struct pthread_args* args = (struct pthread_args*)pthread_args;
     int k = args->k;
     int temp_k = args->temp_k;
     int id = args->thread_id;
-
-    // pair<int,int> bounds = getBounds(id, PTHREAD_COUNT, N);
-    // int l_1 = bounds.first;
-    // int r_1 = bounds.second;
-    // for(int i=l_1; i<r_1; i++){
-    //     swap(temp_A[k][i], temp_A[temp_k][i]);
-    // }
     
     pair<int,int> bounds_2 = getBounds(id, PTHREAD_COUNT, k);
     int l_2 = bounds_2.first;
@@ -99,9 +94,30 @@ void *LUdecompose_work_parallel(void* pthread_args){
     pair<int,int> bounds_3 = getBounds(id, PTHREAD_COUNT, N-k-1);
     int l_3 = k+1 + bounds_3.first;
     int r_3 = k+1 + bounds_3.second;
+    
     #ifdef DEBUG
+        ofstream fout;
+        fout.open(DEBUG_OUT_FILE, ios::app);
         fout << "Thread " << id  << " k: " << k << " l_3: " << l_3 << " r_3: " << r_3 << endl;
     #endif
+
+    for(int ind=l_3; ind<r_3; ind++){
+        L[ind][k] = (temp_A[ind][k]*1.0)/U[k][k];
+        U[k][ind] = temp_A[k][ind];
+    }
+    
+    pthread_exit(NULL);
+}
+
+void *parallel_compute_A(void * pthread_args){
+    struct pthread_args* args = (struct pthread_args*)pthread_args;
+    int k = args->k;
+    int id = args->thread_id;
+
+    pair<int,int> bounds_3 = getBounds(id, PTHREAD_COUNT, N-k-1);
+    int l_3 = k+1 + bounds_3.first;
+    int r_3 = k+1 + bounds_3.second;
+
     for(int ind=l_3; ind<r_3; ind++){
         L[ind][k] = (temp_A[ind][k]*1.0)/U[k][k];
         U[k][ind] = temp_A[k][ind];
@@ -111,8 +127,9 @@ void *LUdecompose_work_parallel(void* pthread_args){
             temp_A[i][j] -= L[i][k]*U[k][j];
         }
     }
+    
     pthread_exit(NULL);
-}
+} 
 
 void LUdecompose(){
     pthread_args args[PTHREAD_COUNT];
@@ -133,31 +150,24 @@ void LUdecompose(){
         U[k][k] = temp_A[temp_k][k];
         swap(pi[k], pi[temp_k]);
         swap(temp_A[k], temp_A[temp_k]);
-        
+
         for(int num = 0; num < PTHREAD_COUNT; num++){
             args[num].k = k;
             args[num].thread_id = num;
             args[num].temp_k = temp_k;
-            pthread_create(&threads[num], NULL, &LUdecompose_work_parallel, (void*)&args[num]);
+            pthread_create(&threads[num], NULL, &parallel_swap_LU, (void*)&args[num]);
         }
 
-        
-        // temp_A[k].swap(temp_A[temp_k]);
-        // for(int i=0; i<k; i++){
-        //     swap(L[k][i], L[temp_k][i]);
-        // }
-
-        // for(int i=k+1; i<N; i++){
-        //     L[i][k] = (temp_A[i][k]*1.0)/U[k][k];
-        //     U[k][i] = temp_A[k][i];
-        // }
-        // for(int i=k+1; i<N; i++){
-        //     for(int j=k+1; j<N; j++){
-        //         temp_A[i][j] -= L[i][k]*U[k][j];
-        //     }
-        // }
+        for(int num = 0; num < PTHREAD_COUNT; num++){
+            pthread_join(threads[num], NULL);
+        }
 
         for(int num = 0; num < PTHREAD_COUNT; num++){
+            args[num].k = k;
+            args[num].thread_id = num;
+            pthread_create(&threads[num], NULL, &parallel_compute_A, (void*)&args[num]);
+        }
+        for (int num = 0; num < PTHREAD_COUNT; num++){
             pthread_join(threads[num], NULL);
         }
     }
@@ -196,7 +206,7 @@ void verifyLU(){
 
     #ifdef DEBUG_LU_VERIFY
     ofstream fout;
-    fout.open(LU_VERIFY_OUT, ios::app);
+    fout.open(LU_VERIFY_OUT);
     for(int i=0; i<N; i++){
         for(int j=0; j<N; j++){
             fout << residual[i][j] << " ";

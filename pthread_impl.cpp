@@ -76,12 +76,13 @@ void *LUdecompose_work_parallel(void* pthread_args){
     int k = args->k;
     int temp_k = args->temp_k;
     int id = args->thread_id;
-    pair<int,int> bounds = getBounds(id, PTHREAD_COUNT, N);
-    int l_1 = bounds.first;
-    int r_1 = bounds.second;
-    for(int i=l_1; i<r_1; i++){
-        swap(temp_A[k][i], temp_A[temp_k][i]);
-    }
+
+    // pair<int,int> bounds = getBounds(id, PTHREAD_COUNT, N);
+    // int l_1 = bounds.first;
+    // int r_1 = bounds.second;
+    // for(int i=l_1; i<r_1; i++){
+    //     swap(temp_A[k][i], temp_A[temp_k][i]);
+    // }
     
     pair<int,int> bounds_2 = getBounds(id, PTHREAD_COUNT, k);
     int l_2 = bounds_2.first;
@@ -129,8 +130,10 @@ void LUdecompose(){
         if(maxi == 0.0){
             perror("Singular matrix");
         }
-        U[k][k] = temp_A[k][k];
+        U[k][k] = temp_A[temp_k][k];
         swap(pi[k], pi[temp_k]);
+        swap(temp_A[k], temp_A[temp_k]);
+        
         for(int num = 0; num < PTHREAD_COUNT; num++){
             args[num].k = k;
             args[num].thread_id = num;

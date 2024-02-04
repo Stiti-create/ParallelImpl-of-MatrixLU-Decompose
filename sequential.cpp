@@ -1,5 +1,7 @@
 #include <bits/stdc++.h>
 #include <fstream>
+#include <chrono>
+#include <time.h>
 #include "constants.h"
 using namespace std;
 
@@ -50,6 +52,7 @@ void initOutputs(){
 }
 
 void LUdecompose(){
+    auto start_time = chrono::high_resolution_clock::now();
     for (int k=0; k<N; k++){
         double maxi = 0.0;
         int temp_k = k;
@@ -62,12 +65,12 @@ void LUdecompose(){
         if(maxi == 0.0){
             perror("Singular matrix");
         }
+        U[k][k] = temp_A[temp_k][k];
         swap(pi[k], pi[temp_k]);
         temp_A[k].swap(temp_A[temp_k]);
         for(int i=0; i<k; i++){
             swap(L[k][i], L[temp_k][i]);
         }
-        U[k][k] = temp_A[k][k];
         for(int i=k+1; i<N; i++){
             L[i][k] = (temp_A[i][k]*1.0)/U[k][k];
             U[k][i] = temp_A[k][i];
@@ -82,6 +85,12 @@ void LUdecompose(){
     for(int i=0; i<N; i++){
         P[i][pi[i]] = 1;
     }
+    auto end_time = chrono::high_resolution_clock::now();
+    double time_taken = chrono::duration_cast<chrono::milliseconds>(end_time - start_time).count();
+    ofstream fout;
+    fout.open(LOG_OUT_FILE, ios::app);
+    fout << "N: " << N << ", Sequential: " << time_taken << " ms" << endl;
+    fout.close();
     return;
 }
 
@@ -103,9 +112,9 @@ void verifyLU(){
         }
     }
 
-    #ifdef DEBUG
+    #ifdef DEBUG_LU_VERIFY
     ofstream fout;
-    fout.open(DEBUG_OUT_FILE);
+    fout.open(LU_VERIFY_OUT, ios::app);
     for(int i=0; i<N; i++){
         for(int j=0; j<N; j++){
             fout << residual[i][j] << " ";

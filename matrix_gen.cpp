@@ -5,11 +5,6 @@
 #include <pthread.h>
 using namespace std;
 
-struct pthread_args{
-    int thread_id;
-};
-
-
 vector<vector<double>> A(N, vector<double>(N, 0.0));
 
 int main(){

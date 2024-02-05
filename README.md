@@ -1,5 +1,6 @@
 ### LU Decomposition of Matrix using Row-Pivoting
-This repository contains Sequential and Parallel implementations of LU decomposition using row-pivoting that use Gaussian elimination to factor a dense N x N matrix into an upper-triangular one and a lower-triangular one, in C++.Includes analysis of comparisions of sequential, pthread and openmp implementations.
+* This repository contains Sequential and Parallel implementations of LU decomposition using row-pivoting that use Gaussian elimination to factor a dense N x N matrix into an upper-triangular one and a lower-triangular one, in C++.
+* Includes analysis of comparisions of sequential, pthread and openmp implementations.
 
 ### Instructions to run the code
 

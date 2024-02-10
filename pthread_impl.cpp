@@ -17,6 +17,7 @@ vector<vector<double>> residual(N, vector<double>(N, 0.0));
 vector<vector<double>> temp_A(N, vector<double>(N, 0.0));
 pthread_mutex_t lock_1;
 pthread_mutex_t lock_2;
+pthread_barrier_t barrier_1;
 
 struct pthread_args{
     int k;
@@ -105,23 +106,9 @@ void *parallel_swap_LU(void* pthread_args){
         L[ind][k] = (temp_A[ind][k]*1.0)/U[k][k];
         U[k][ind] = temp_A[k][ind];
     }
-    
-    pthread_exit(NULL);
-}
 
-void *parallel_compute_A(void * pthread_args){
-    struct pthread_args* args = (struct pthread_args*)pthread_args;
-    int k = args->k;
-    int id = args->thread_id;
+    pthread_barrier_wait(&barrier_1);
 
-    pair<int,int> bounds_3 = getBounds(id, PTHREAD_COUNT, N-k-1);
-    int l_3 = k+1 + bounds_3.first;
-    int r_3 = k+1 + bounds_3.second;
-
-    for(int ind=l_3; ind<r_3; ind++){
-        L[ind][k] = (temp_A[ind][k]*1.0)/U[k][k];
-        U[k][ind] = temp_A[k][ind];
-    }
     for(int i=l_3; i<r_3; i++){
         for(int j=k+1; j<N; j++){
             temp_A[i][j] -= L[i][k]*U[k][j];
@@ -129,7 +116,7 @@ void *parallel_compute_A(void * pthread_args){
     }
     
     pthread_exit(NULL);
-} 
+}
 
 void LUdecompose(){
     pthread_args args[PTHREAD_COUNT];
@@ -151,6 +138,8 @@ void LUdecompose(){
         swap(pi[k], pi[temp_k]);
         swap(temp_A[k], temp_A[temp_k]);
 
+        pthread_barrier_init(&barrier_1, NULL, PTHREAD_COUNT);
+
         for(int num = 0; num < PTHREAD_COUNT; num++){
             args[num].k = k;
             args[num].thread_id = num;
@@ -158,15 +147,6 @@ void LUdecompose(){
             pthread_create(&threads[num], NULL, &parallel_swap_LU, (void*)&args[num]);
         }
 
-        for(int num = 0; num < PTHREAD_COUNT; num++){
-            pthread_join(threads[num], NULL);
-        }
-
-        for(int num = 0; num < PTHREAD_COUNT; num++){
-            args[num].k = k;
-            args[num].thread_id = num;
-            pthread_create(&threads[num], NULL, &parallel_compute_A, (void*)&args[num]);
-        }
         for (int num = 0; num < PTHREAD_COUNT; num++){
             pthread_join(threads[num], NULL);
         }

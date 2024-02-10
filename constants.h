@@ -1,4 +1,4 @@
-#define N 100
+#define N 1000
 #define INPUT_MATRIX_FILE "matrix.txt"
 #define DEBUG_OUT_FILE "debug.txt"
 #define LU_VERIFY_OUT "debug_lu_verify.txt"

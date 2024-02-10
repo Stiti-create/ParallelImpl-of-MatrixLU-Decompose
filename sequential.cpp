@@ -90,7 +90,7 @@ void LUdecompose(){
     ofstream fout;
     fout.open(LOG_OUT_FILE, ios::app);
     fout << "-----------------------------------------------\n";
-    fout << "N: " << N << ", Sequential: " << time_taken << " ms" << endl;
+    fout << "thread,"<<PTHREAD_COUNT<<",N," << N << ",sequential," << time_taken << ",ms" << endl;
     fout.close();
     return;
 }

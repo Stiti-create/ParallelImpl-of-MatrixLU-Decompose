@@ -195,7 +195,7 @@ void LUdecompose()
     ofstream fout;
     fout.open(LOG_OUT_FILE, ios::app);
     fout << "-----------------------------------------------\n";
-    fout << "N: " << N << ", Parallel (pthread): " << time_taken << " ms" << endl;
+    fout << "thread,"<<PTHREAD_COUNT<<",N," << N << ",pthread," << time_taken << ",ms" << endl;
     fout.close();
     return;
 }

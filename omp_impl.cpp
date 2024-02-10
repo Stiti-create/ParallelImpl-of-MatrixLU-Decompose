@@ -2,8 +2,9 @@
 #include <fstream>
 #include <chrono>
 #include <time.h>
-#include "constants.h"
 #include <omp.h>
+#include "constants.h"
+
 using namespace std;
 
 vector<int> pi(N, 0);
@@ -15,6 +16,11 @@ vector<vector<double>> PA(N, vector<double>(N, 0.0));
 vector<vector<double>> LU(N, vector<double>(N, 0.0));
 vector<vector<double>> residual(N, vector<double>(N, 0.0));
 vector<vector<double>> temp_A(N, vector<double>(N, 0.0));
+
+struct thread_args{
+    int k;
+    int temp_k;
+};
 
 void inputMatrix(){
     ifstream fin;
@@ -52,7 +58,62 @@ void initOutputs(){
     }
 }
 
+pair<int,int> getBounds(int id, int num_threads, int num_iter){
+    int q = num_iter/num_threads;
+    int c = int(ceil(num_iter/(1.0*num_threads)));
+    int r = num_iter%num_threads;
+    int base = r*c;
+    if(id<r){
+        return {id*c, (id+1)*c};
+    }
+    else{
+        return {base+(id-r)*q, base+(id+1-r)*q};
+    }
+}
+
+void parallel_swap_LU(int k, int temp_k){
+    // struct pthread_args* args = (struct pthread_args*)pthread_args;
+    int id = omp_get_thread_num();
+    
+    pair<int,int> bounds_2 = getBounds(id, PTHREAD_COUNT, k);
+    int l_2 = bounds_2.first;
+    int r_2 = bounds_2.second;
+    for(int j=l_2; j<r_2; j++){
+        swap(L[k][j], L[temp_k][j]);
+    }
+    #ifdef DEBUG
+        ofstream fout;
+        fout.open(DEBUG_OUT_FILE, ios::app);
+        fout << "Thread " << id  << " k: " << k << " l_2: " << l_2 << " r_2: " << r_2 << endl;
+    #endif
+
+    pair<int,int> bounds_3 = getBounds(id, PTHREAD_COUNT, N-k-1);
+    int l_3 = k+1 + bounds_3.first;
+    int r_3 = k+1 + bounds_3.second;
+    
+    #ifdef DEBUG
+        ofstream fout;
+        fout.open(DEBUG_OUT_FILE, ios::app);
+        fout << "Thread " << id  << " k: " << k << " l_3: " << l_3 << " r_3: " << r_3 << endl;
+    #endif
+
+    for(int ind=l_3; ind<r_3; ind++){
+        L[ind][k] = (temp_A[ind][k]*1.0)/U[k][k];
+        U[k][ind] = temp_A[k][ind];
+    }
+
+    #pragma omp barrier
+    
+    for(int i=l_3; i<r_3; i++){
+        for(int j=k+1; j<N; j++){
+            temp_A[i][j] -= L[i][k]*U[k][j];
+        }
+    }
+    return;
+}
+
 void LUdecompose(){
+
     auto start_time = chrono::high_resolution_clock::now();
     for (int k=0; k<N; k++){
         double maxi = 0.0;
@@ -68,28 +129,15 @@ void LUdecompose(){
         }
         U[k][k] = temp_A[temp_k][k];
         swap(pi[k], pi[temp_k]);
-        temp_A[k].swap(temp_A[temp_k]);
+        swap(temp_A[k], temp_A[temp_k]);
 
-        #pragma omp parallel for num_threads(PTHREAD_COUNT)
-        for(int i=0; i<k; i++){
-            swap(L[k][i], L[temp_k][i]);
-        }
-
-        #pragma omp parallel for num_threads(PTHREAD_COUNT)
-        for(int i=k+1; i<N; i++){
-            L[i][k] = (temp_A[i][k]*1.0)/U[k][k];
-            U[k][i] = temp_A[k][i];
-        }
-
-        #pragma omp parallel for num_threads(PTHREAD_COUNT)
-        for(int i=k+1; i<N; i++){
-            for(int j=k+1; j<N; j++){
-                temp_A[i][j] -= L[i][k]*U[k][j];
-            }
+        #pragma omp parallel num_threads(PTHREAD_COUNT)
+        {
+            parallel_swap_LU(k, temp_k);
         }
     }
 
-    #pragma omp parallel for num_threads(PTHREAD_COUNT)
+    // can be done parallelly in future, let it be sequential for now
     for(int i=0; i<N; i++){
         P[i][pi[i]] = 1;
     }
@@ -98,7 +146,7 @@ void LUdecompose(){
     ofstream fout;
     fout.open(LOG_OUT_FILE, ios::app);
     fout << "-----------------------------------------------\n";
-    fout << "N: " << N << ", Parallel(OpenMP): " << time_taken << " ms" << endl;
+    fout << "thread,"<<PTHREAD_COUNT<<",N," << N << ",openmp," << time_taken << ",ms" << endl;
     fout.close();
     return;
 }
@@ -123,7 +171,7 @@ void verifyLU(){
 
     #ifdef DEBUG_LU_VERIFY
     ofstream fout;
-    fout.open(LU_VERIFY_OUT, ios::app);
+    fout.open(LU_VERIFY_OUT);
     for(int i=0; i<N; i++){
         for(int j=0; j<N; j++){
             fout << residual[i][j] << " ";

@@ -31,6 +31,12 @@ clean:
 	rm -f debug.txt debug_lu_verify.txt 
 	rm -f matrix_gen sequential pth_impl omp_impl
 
+gprof:
+	g++ -pg pthread_impl.cpp -o pth_impl -lpthread
+	./pth_impl
+	gprof pth_impl gmon.out > debug.txt
+	rm -f gmon.out
+
 
 
 	

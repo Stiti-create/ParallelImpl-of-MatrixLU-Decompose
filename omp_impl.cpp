@@ -57,12 +57,31 @@ void LUdecompose(){
     for (int k=0; k<N; k++){
         double maxi = 0.0;
         int temp_k = k;
-        for (int i=k; i<N; i++){
-            if (maxi < temp_A[i][k]){
-                maxi = temp_A[i][k];
-                temp_k = i;
+        #pragma omp parallel 
+        {
+            double local_maxi = 0.0;
+            int local_temp_k = k;
+            #pragma omp for schedule(static)
+            for (int i=k; i<N; i++){
+                if (local_maxi < temp_A[i][k]){
+                    local_maxi = temp_A[i][k];
+                    local_temp_k = i;
+                }
+            }
+            #pragma omp critical
+            {
+                if(local_maxi > maxi){
+                    maxi = local_maxi;
+                    temp_k = local_temp_k;
+                }
             }
         }
+        // for (int i=k; i<N; i++){
+        //     if (maxi < temp_A[i][k]){
+        //         maxi = temp_A[i][k];
+        //         temp_k = i;
+        //     }
+        // }
         if(maxi == 0.0){
             perror("Singular matrix");
         }
@@ -70,18 +89,19 @@ void LUdecompose(){
         swap(pi[k], pi[temp_k]);
         temp_A[k].swap(temp_A[temp_k]);
 
-        #pragma omp parallel for num_threads(PTHREAD_COUNT)
+        // #pragma omp parallel for num_threads(PTHREAD_COUNT) schedule(static)
+        // THIS MIGHT CREATE OVERHEAD
         for(int i=0; i<k; i++){
             swap(L[k][i], L[temp_k][i]);
         }
 
-        #pragma omp parallel for num_threads(PTHREAD_COUNT)
+        #pragma omp parallel for num_threads(PTHREAD_COUNT) schedule(static)
         for(int i=k+1; i<N; i++){
             L[i][k] = (temp_A[i][k]*1.0)/U[k][k];
             U[k][i] = temp_A[k][i];
         }
 
-        #pragma omp parallel for num_threads(PTHREAD_COUNT)
+        #pragma omp parallel for num_threads(PTHREAD_COUNT) schedule(static) collapse(2)
         for(int i=k+1; i<N; i++){
             for(int j=k+1; j<N; j++){
                 temp_A[i][j] -= L[i][k]*U[k][j];

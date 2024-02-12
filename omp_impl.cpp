@@ -119,7 +119,7 @@ void LUdecompose()
         #pragma omp parallel for num_threads(PTHREAD_COUNT) schedule(static) if (N - k - 1 > 10)
         for (int i = k + 1; i < N; i++)
         {
-            #pragma omp simd aligned(l, u: 32)
+            // #pragma omp simd aligned(l, u: 32)
             for (int j = k + 1; j < N; j++)
             {
                 temp_A[i][j] -= l[i]*u[j];

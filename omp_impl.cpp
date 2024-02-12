@@ -6,16 +6,22 @@
 #include <omp.h>
 using namespace std;
 
-vector<int> pi(N, 0);
+// vector<int> pi(N, 0);
 vector<vector<double>> A(N, vector<double>(N, 0.0));
-vector<vector<double>> L(N, vector<double>(N, 0.0));
-vector<vector<double>> U(N, vector<double>(N, 0.0));
-vector<vector<int>> P(N, vector<int>(N, 0));
+// vector<vector<double>> L(N, vector<double>(N, 0.0));
+// vector<vector<double>> U(N, vector<double>(N, 0.0));
+// vector<vector<int>> P(N, vector<int>(N, 0));
 vector<vector<double>> PA(N, vector<double>(N, 0.0));
 vector<vector<double>> LU(N, vector<double>(N, 0.0));
 vector<vector<double>> residual(N, vector<double>(N, 0.0));
-vector<vector<double>> temp_A(N, vector<double>(N, 0.0));
-vector<double> l(N,0),u(N,0);
+// double temp_A[N][N];
+// vector<vector<double>> temp_A(N, vector<double>(N, 0.0));
+double temp_A[N][N];
+double l[N], u[N];
+double L[N][N], U[N][N];
+int P[N][N];
+int pi[N];
+
 
 void inputMatrix()
 {
@@ -77,28 +83,6 @@ void LUdecompose()
         double maxi = 0.0;
         int temp_k = k;
         
-        // #pragma omp parallel
-        // {
-        //     double local_maxi = 0.0;
-        //     int local_temp_k = k;
-        //     #pragma omp for schedule(static)
-        //     for (int i = k; i < N; i++)
-        //     {
-        //         if (local_maxi < temp_A[i][k])
-        //         {
-        //             local_maxi = temp_A[i][k];
-        //             local_temp_k = i;
-        //         }
-        //     }
-        //     #pragma omp critical
-        //     {
-        //         if (local_maxi > maxi)
-        //         {
-        //             maxi = local_maxi;
-        //             temp_k = local_temp_k;
-        //         }
-        //     }
-        // }
         for(int i = k; i < N; i++)
         {
             if (maxi < temp_A[i][k])
@@ -115,20 +99,18 @@ void LUdecompose()
         
         U[k][k] = temp_A[temp_k][k];
         swap(pi[k], pi[temp_k]);
-        temp_A[k].swap(temp_A[temp_k]);
-        
+        swap(temp_A[k], temp_A[temp_k]);
         // THIS MIGHT CREATE OVERHEAD
         #pragma omp parallel for num_threads(PTHREAD_COUNT) schedule(static)
         for (int i = 0; i < k; i++)
         {
             swap(L[k][i], L[temp_k][i]);
         }
-
         
         #pragma omp parallel for num_threads(PTHREAD_COUNT) schedule(static) if (N - k - 1 > 100)
         for (int i = k + 1; i < N; i++)     
         {
-            L[i][k] = (temp_A[i][k] * 1.0) / U[k][k];
+            L[i][k] = temp_A[i][k] / U[k][k];
             U[k][i] = temp_A[k][i];
             l[i] = L[i][k];
             u[i] = U[k][i]; 
@@ -137,6 +119,7 @@ void LUdecompose()
         #pragma omp parallel for num_threads(PTHREAD_COUNT) schedule(static) if (N - k - 1 > 10)
         for (int i = k + 1; i < N; i++)
         {
+            #pragma omp simd aligned(l, u: 32)
             for (int j = k + 1; j < N; j++)
             {
                 temp_A[i][j] -= l[i]*u[j];
@@ -165,7 +148,7 @@ void LUdecompose()
     fout.open(LOG_OUT_FILE, ios::app);
     fout << "-----------------------------------------------\n";
     fout << "N: " << N << ", Parallel(OpenMP): " << time_taken << " ms" << endl;
-    fout << "Total swap time seq: " << total_A_time << " ns" << endl;
+    // fout << "Total swap time seq: " << total_A_time << " ns" << endl;
     fout.close();
     return;
 }

@@ -5,15 +5,19 @@
 #include "constants.h"
 using namespace std;
 
-vector<int> pi(N, 0);
+// vector<int> pi(N, 0);
 vector<vector<double>> A(N, vector<double>(N, 0.0));
-vector<vector<double>> L(N, vector<double>(N, 0.0));
-vector<vector<double>> U(N, vector<double>(N, 0.0));
-vector<vector<int>> P(N, vector<int>(N, 0));
+// vector<vector<double>> L(N, vector<double>(N, 0.0));
+// vector<vector<double>> U(N, vector<double>(N, 0.0));
+// vector<vector<int>> P(N, vector<int>(N, 0));
 vector<vector<double>> PA(N, vector<double>(N, 0.0));
 vector<vector<double>> LU(N, vector<double>(N, 0.0));
 vector<vector<double>> residual(N, vector<double>(N, 0.0));
-vector<vector<double>> temp_A(N, vector<double>(N, 0.0));
+double temp_A[N][N];
+// vector<vector<double>> temp_A(N, vector<double>(N, 0.0));
+double L[N][N], U[N][N];
+int P[N][N];
+int pi[N];
 
 void inputMatrix(){
     ifstream fin;
@@ -52,6 +56,9 @@ void initOutputs(){
 }
 
 void LUdecompose(){
+    ofstream fout;
+    fout.open(DEBUG_OUT_FILE_2, ios::app);
+    double total_A_time = 0.0;
     auto start_time = chrono::high_resolution_clock::now();
     for (int k=0; k<N; k++){
         double maxi = 0.0;
@@ -67,7 +74,7 @@ void LUdecompose(){
         }
         U[k][k] = temp_A[temp_k][k];
         swap(pi[k], pi[temp_k]);
-        temp_A[k].swap(temp_A[temp_k]);
+        swap(temp_A[k], temp_A[temp_k]);
         for(int i=0; i<k; i++){
             swap(L[k][i], L[temp_k][i]);
         }
@@ -75,19 +82,26 @@ void LUdecompose(){
             L[i][k] = (temp_A[i][k]*1.0)/U[k][k];
             U[k][i] = temp_A[k][i];
         }
+        auto start_A_time = chrono::high_resolution_clock::now();
         for(int i=k+1; i<N; i++){
             for(int j=k+1; j<N; j++){
                 temp_A[i][j] -= L[i][k]*U[k][j];
             }
         }
+        auto end_A_time = chrono::high_resolution_clock::now();
+        double time_taken_A = chrono::duration_cast<chrono::nanoseconds>(end_A_time - start_A_time).count();
+        total_A_time += time_taken_A;
+        fout << "A time: " << time_taken_A << " ns" << endl;
     }
 
+    fout << "Total A time: " << total_A_time << " ns" << endl;
+    fout.close();
     for(int i=0; i<N; i++){
         P[i][pi[i]] = 1;
     }
+
     auto end_time = chrono::high_resolution_clock::now();
     double time_taken = chrono::duration_cast<chrono::milliseconds>(end_time - start_time).count();
-    ofstream fout;
     fout.open(LOG_OUT_FILE, ios::app);
     fout << "-----------------------------------------------\n";
     fout << "N: " << N << ", Sequential: " << time_taken << " ms" << endl;

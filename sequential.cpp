@@ -57,7 +57,7 @@ void initOutputs(){
 
 void LUdecompose(){
     ofstream fout;
-    fout.open(DEBUG_OUT_FILE_2, ios::app);
+    // fout.open(DEBUG_OUT_FILE_2, ios::app);
     double total_A_time = 0.0;
     auto start_time = chrono::high_resolution_clock::now();
     for (int k=0; k<N; k++){
@@ -82,20 +82,20 @@ void LUdecompose(){
             L[i][k] = (temp_A[i][k]*1.0)/U[k][k];
             U[k][i] = temp_A[k][i];
         }
-        auto start_A_time = chrono::high_resolution_clock::now();
+        // auto start_A_time = chrono::high_resolution_clock::now();
         for(int i=k+1; i<N; i++){
             for(int j=k+1; j<N; j++){
                 temp_A[i][j] -= L[i][k]*U[k][j];
             }
         }
-        auto end_A_time = chrono::high_resolution_clock::now();
-        double time_taken_A = chrono::duration_cast<chrono::nanoseconds>(end_A_time - start_A_time).count();
-        total_A_time += time_taken_A;
-        fout << "A time: " << time_taken_A << " ns" << endl;
+        // auto end_A_time = chrono::high_resolution_clock::now();
+        // double time_taken_A = chrono::duration_cast<chrono::nanoseconds>(end_A_time - start_A_time).count();
+        // total_A_time += time_taken_A;
+        // fout << "A time: " << time_taken_A << " ns" << endl;
     }
 
-    fout << "Total A time: " << total_A_time << " ns" << endl;
-    fout.close();
+    // fout << "Total A time: " << total_A_time << " ns" << endl;
+    // fout.close();
     for(int i=0; i<N; i++){
         P[i][pi[i]] = 1;
     }
@@ -155,5 +155,5 @@ int main(){
     inputMatrix();
     initOutputs();
     LUdecompose();
-    verifyLU();
+    // verifyLU();
 }

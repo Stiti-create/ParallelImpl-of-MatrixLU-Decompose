@@ -74,9 +74,9 @@ void initOutputs()
 void LUdecompose()
 {
     ofstream fout;
-    fout.open(DEBUG_OUT_FILE, ios::app);
-    auto start_time = chrono::high_resolution_clock::now();
+    // fout.open(DEBUG_OUT_FILE, ios::app);
     double total_A_time = 0.0;
+    auto start_time = chrono::high_resolution_clock::now();
     for (int k = 0; k < N; k++)
     {
        
@@ -101,7 +101,7 @@ void LUdecompose()
         swap(pi[k], pi[temp_k]);
         swap(temp_A[k], temp_A[temp_k]);
         // THIS MIGHT CREATE OVERHEAD
-        #pragma omp parallel for num_threads(PTHREAD_COUNT) schedule(static)
+        // #pragma omp parallel for num_threads(PTHREAD_COUNT) schedule(static)
         for (int i = 0; i < k; i++)
         {
             swap(L[k][i], L[temp_k][i]);
@@ -115,8 +115,8 @@ void LUdecompose()
             l[i] = L[i][k];
             u[i] = U[k][i]; 
         }
-        auto inner_start_time = chrono::high_resolution_clock::now();
-        #pragma omp parallel for num_threads(PTHREAD_COUNT) schedule(static) if (N - k - 1 > 10)
+        // auto inner_start_time = chrono::high_resolution_clock::now();
+        #pragma omp parallel for num_threads(PTHREAD_COUNT) schedule(static) if (N - k - 1 > 100)
         for (int i = k + 1; i < N; i++)
         {
             // #pragma omp simd aligned(l, u: 32)
@@ -125,18 +125,21 @@ void LUdecompose()
                 temp_A[i][j] -= l[i]*u[j];
             }
         }
+        #ifdef DEBUG
         auto inner_end_time = chrono::high_resolution_clock::now();
-        
         
         double inner_time_taken = chrono::duration_cast<chrono::nanoseconds>(inner_end_time - inner_start_time).count();
         total_A_time += inner_time_taken;
         
         fout << "Inner Parallel Time: " << inner_time_taken << " ns\n" << endl;
-        
+        #endif
     }
-    fout << "Total A Time: " << total_A_time << " ns" << endl;
-    fout.close();
-    
+
+    #ifdef DEBUG
+        fout << "Total A Time: " << total_A_time << " ns" << endl;
+        fout.close();
+    #endif
+
     #pragma omp parallel for num_threads(PTHREAD_COUNT)
     for (int i = 0; i < N; i++)
     {
@@ -209,5 +212,5 @@ int main()
     inputMatrix();
     initOutputs();
     LUdecompose();
-    verifyLU();
+    // verifyLU();
 }

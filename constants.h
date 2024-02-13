@@ -6,3 +6,4 @@
 #define LOG_OUT_FILE "log.txt"
 #define PTHREAD_COUNT 8
 // #define DEBUG 1
+// #define TIMING 1

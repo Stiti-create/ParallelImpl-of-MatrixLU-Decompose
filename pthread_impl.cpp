@@ -114,7 +114,7 @@ void LUdecompose(){
     ofstream fout;
 
     #ifdef TIMING
-    fout.open(DEBUG_OUT_FILE, ios::app);
+    fout.open(DEBUG_OUT_FILE_3, ios::app);
     double total_A_time = 0.0;
     #endif
 
@@ -169,6 +169,11 @@ void LUdecompose(){
         #endif
     }
 
+    #ifdef TIMING
+        fout << "Total A Time: " << total_A_time << " ns" << endl;
+        fout.close();
+    #endif
+
     for(int i=0; i<N; i++){
         P[i][pi[i]] = 1;
     }
@@ -177,6 +182,9 @@ void LUdecompose(){
     fout.open(LOG_OUT_FILE, ios::app);
     fout << "-----------------------------------------------\n";
     fout << "N=" << N << ", Pthreads,"<< " Threads=" <<PTHREAD_COUNT <<", " << time_taken << " ms" << endl;
+    #ifdef TIMING
+    fout << "Total A update time PTH: " << total_A_time << " ns" << endl;
+    #endif
     fout.close();
     return;
 }

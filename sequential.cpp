@@ -114,6 +114,9 @@ void LUdecompose(){
     fout.open(LOG_OUT_FILE, ios::app);
     fout << "-----------------------------------------------\n";
     fout << "N=" << N << ", Sequential,"<< " Threads=1, " << time_taken << " ms" << endl;
+    #ifdef TIMING
+    fout << "Total A update time SEQ: " << total_A_time << " ns" << endl;
+    #endif
     fout.close();
     return;
 }

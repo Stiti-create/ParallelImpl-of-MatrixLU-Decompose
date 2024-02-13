@@ -10,10 +10,12 @@ int pi[N];
 int P[N][N];
 double A[N][N];
 double L[N][N], U[N][N];
-double temp_A[N][N];
+double* temp_A[N];
 double PA[N][N];
 double LU[N][N];
 double residual[N][N];
+double l[N], u[N];
+
 pthread_barrier_t barrier_1;
 
 struct pthread_args{
@@ -36,6 +38,7 @@ void inputMatrix(){
 
 void initOutputs(){
     for(int i = 0; i < N; i++){
+        temp_A[i] = (double *)malloc(N * sizeof(double));
         for(int j = 0; j < N; j++){
             U[i][j] = A[i][j];
             L[i][j] = A[i][j];
@@ -76,13 +79,7 @@ void *parallel_compute(void* pthread_args){
     int k = args->k;
     int temp_k = args->temp_k;
     int id = args->thread_id;
-    
-    pair<int,int> bounds_2 = getBounds(id, PTHREAD_COUNT, k);
-    int l_2 = bounds_2.first;
-    int r_2 = bounds_2.second;
-    for(int j=l_2; j<r_2; j++){
-        swap(L[k][j], L[temp_k][j]);
-    }
+
     #ifdef DEBUG
         ofstream fout;
         fout.open(DEBUG_OUT_FILE, ios::app);
@@ -102,13 +99,22 @@ void *parallel_compute(void* pthread_args){
     for(int ind=l_3; ind<r_3; ind++){
         L[ind][k] = (temp_A[ind][k]*1.0)/U[k][k];
         U[k][ind] = temp_A[k][ind];
+        l[ind] = L[ind][k];
+        u[ind] = U[k][ind];
     }
 
     pthread_barrier_wait(&barrier_1);
 
     for(int i=l_3; i<r_3; i++){
-        for(int j=k+1; j<N; j++){
-            temp_A[i][j] -= L[i][k]*U[k][j];
+        for(int j=k+1; j<N; j+=8){
+            temp_A[i][j] -= l[i]*u[j];
+            if(j+1 < N) temp_A[i][j+1] -= l[i]*u[j+1];
+            if(j+2 < N) temp_A[i][j+2] -= l[i]*u[j+2];
+            if(j+3 < N) temp_A[i][j+3] -= l[i]*u[j+3];
+            if(j+4 < N) temp_A[i][j+4] -= l[i]*u[j+4];
+            if(j+5 < N) temp_A[i][j+5] -= l[i]*u[j+5];
+            if(j+6 < N) temp_A[i][j+6] -= l[i]*u[j+6];
+            if(j+7 < N) temp_A[i][j+7] -= l[i]*u[j+7];
         }
     }
     
@@ -135,6 +141,9 @@ void LUdecompose(){
         U[k][k] = temp_A[temp_k][k];
         swap(pi[k], pi[temp_k]);
         swap(temp_A[k], temp_A[temp_k]);
+        for(int i=0; i<k; i++){
+            swap(L[k][i], L[temp_k][i]);
+        }
         pthread_barrier_init(&barrier_1, NULL, PTHREAD_COUNT);
 
         for(int num = 0; num < PTHREAD_COUNT; num++){

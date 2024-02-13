@@ -13,15 +13,12 @@ gen:
 
 seq:
 	g++ sequential.cpp -o sequential 
-	./sequential
 
 pth:
 	g++ pthread_impl.cpp -o pth_impl -lpthread
-	./pth_impl
 
 omp:
 	g++ omp_impl.cpp -o omp_impl -fopenmp
-	./omp_impl
 
 debug: 
 	g++ -g pthread_impl.cpp -o pth_impl -lpthread

@@ -8,9 +8,13 @@
 2. To generate a random matrix of required size:
     * Change the value of N from `constants.h` accordingly
     * Run the command `make gen`
-3. To run the different modes of LU decomposition:
+3. To compile the different modes of LU decomposition:
     * Sequential Implementation: `make seq`
     * Parallel Implementation using pthreads: `make pth`
     * Parallel Implementation using openmp: `make omp`
-4. You can view the time taken by different implementations in `log.txt`
+4. Run the different codes:
+    * ./sequential
+    * ./pth_impl
+    * ./omp_impl
+5. You can view the time taken by different implementations in `log.txt`
 

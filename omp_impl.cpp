@@ -6,18 +6,11 @@
 #include <omp.h>
 using namespace std;
 
-// vector<int> pi(N, 0);
-vector<vector<double>> A(N, vector<double>(N, 0.0));
-// vector<vector<double>> L(N, vector<double>(N, 0.0));
-// vector<vector<double>> U(N, vector<double>(N, 0.0));
-// vector<vector<int>> P(N, vector<int>(N, 0));
-vector<vector<double>> PA(N, vector<double>(N, 0.0));
-vector<vector<double>> LU(N, vector<double>(N, 0.0));
-vector<vector<double>> residual(N, vector<double>(N, 0.0));
-// double temp_A[N][N];
-// vector<vector<double>> temp_A(N, vector<double>(N, 0.0));
+int A[N][N];
+int PA[N][N];
+int LU[N][N];
+int residual[N][N];
 double *temp_A[N];
-double *fake_A[N];
 double l[N], u[N];
 double L[N][N], U[N][N];
 int P[N][N];
@@ -45,7 +38,6 @@ void initOutputs()
     for (int i = 0; i < N; i++)
     {
         temp_A[i] = (double *)malloc(N * sizeof(double));
-        // fake_A[i] = (double *)malloc(N * sizeof(double));
         for (int j = 0; j < N; j++)
         {
             U[i][j] = A[i][j];

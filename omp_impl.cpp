@@ -6,10 +6,10 @@
 #include <omp.h>
 using namespace std;
 
-int A[N][N];
-int PA[N][N];
-int LU[N][N];
-int residual[N][N];
+double A[N][N];
+double PA[N][N];
+double LU[N][N];
+double residual[N][N];
 double *temp_A[N];
 double l[N], u[N];
 double L[N][N], U[N][N];

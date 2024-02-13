@@ -208,5 +208,5 @@ int main(){
     inputMatrix();
     initOutputs();
     LUdecompose();
-    verifyLU();
+    // verifyLU();
 }

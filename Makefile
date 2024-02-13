@@ -25,7 +25,7 @@ debug:
 	gdb pth_impl
 
 clean:
-	rm -f debug.txt debug_lu_verify.txt log.txt
+	rm -f debug.txt debug_lu_verify.txt
 	rm -f matrix_gen sequential pth_impl omp_impl
 
 

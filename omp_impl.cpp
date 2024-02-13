@@ -16,7 +16,8 @@ vector<vector<double>> LU(N, vector<double>(N, 0.0));
 vector<vector<double>> residual(N, vector<double>(N, 0.0));
 // double temp_A[N][N];
 // vector<vector<double>> temp_A(N, vector<double>(N, 0.0));
-double temp_A[N][N];
+double *temp_A[N];
+double *fake_A[N];
 double l[N], u[N];
 double L[N][N], U[N][N];
 int P[N][N];
@@ -43,11 +44,14 @@ void initOutputs()
 {
     for (int i = 0; i < N; i++)
     {
+        temp_A[i] = (double *)malloc(N * sizeof(double));
+        // fake_A[i] = (double *)malloc(N * sizeof(double));
         for (int j = 0; j < N; j++)
         {
             U[i][j] = A[i][j];
             L[i][j] = A[i][j];
             temp_A[i][j] = A[i][j];
+            // fake_A[i][j] = A[i][j];
         }
     }
     for (int i = 0; i < N; i++)
@@ -92,10 +96,10 @@ void LUdecompose()
             }
         }
 
-        if (maxi == 0.0)
-        {
-            perror("Singular matrix");
-        }
+        // if (maxi == 0.0)
+        // {
+        //     perror("Singular matrix");
+        // }
         
         U[k][k] = temp_A[temp_k][k];
         swap(pi[k], pi[temp_k]);
@@ -120,9 +124,17 @@ void LUdecompose()
         for (int i = k + 1; i < N; i++)
         {
             // #pragma omp simd aligned(l, u: 32)
-            for (int j = k + 1; j < N; j++)
+            for (int j = k + 1; j < N; j+=8)
             {
                 temp_A[i][j] -= l[i]*u[j];
+                if(j+1 < N) temp_A[i][j+1] -= l[i]*u[j+1];
+                if(j+2 < N) temp_A[i][j+2] -= l[i]*u[j+2];
+                if(j+3 < N) temp_A[i][j+3] -= l[i]*u[j+3];
+                if(j+4 < N) temp_A[i][j+4] -= l[i]*u[j+4];
+                if(j+5 < N) temp_A[i][j+5] -= l[i]*u[j+5];
+                if(j+6 < N) temp_A[i][j+6] -= l[i]*u[j+6];
+                if(j+7 < N) temp_A[i][j+7] -= l[i]*u[j+7];
+
             }
         }
         #ifdef DEBUG

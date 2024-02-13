@@ -160,9 +160,9 @@ void LUdecompose()
     double time_taken = chrono::duration_cast<chrono::milliseconds>(end_time - start_time).count();
     fout.open(LOG_OUT_FILE, ios::app);
     fout << "-----------------------------------------------\n";
-    fout << "N=" << N << ", OpenMP,"<< " Threads=" <<PTHREAD_COUNT <<", " << time_taken << " ms" << endl;
+    fout << "N=" << N << ", OpenMP,"<< " Threads=" << PTHREAD_COUNT <<", " << time_taken << " ms" << endl;
     #ifdef TIMING
-    fout << "Total swap time seq: " << total_A_time << " ns" << endl;
+    fout << "Total A update time in OMP: " << total_A_time << " ns" << endl;
     #endif
     fout.close();
     return;

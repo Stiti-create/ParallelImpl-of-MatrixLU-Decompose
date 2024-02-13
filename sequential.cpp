@@ -69,9 +69,9 @@ void LUdecompose(){
                 temp_k = i;
             }
         }
-        if(maxi == 0.0){
-            perror("Singular matrix");
-        }
+        // if(maxi == 0.0){
+        //     perror("Singular matrix");
+        // }
         U[k][k] = temp_A[temp_k][k];
         swap(pi[k], pi[temp_k]);
         swap(temp_A[k], temp_A[temp_k]);

@@ -129,11 +129,9 @@ void LUdecompose()
         #ifdef TIMING
         auto inner_start_time = chrono::high_resolution_clock::now();
         #endif
-        #pragma omp parallel for num_threads(PTHREAD_COUNT) 
+        #pragma omp parallel for num_threads(PTHREAD_COUNT) schedule(runtime)
         for (int i = k + 1; i < N; i++)
         {
-            // #pragma omp simd aligned(l, u: 32)
-            double a = 0;
             for (int j = k + 1; j < N; j+=8)
             {
                 temp_A[i][j] -= l[i] * u[j];

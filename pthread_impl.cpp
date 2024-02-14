@@ -16,8 +16,6 @@ double LU[N][N];
 double residual[N][N];
 double l[N], u[N];
 
-pthread_barrier_t barrier_1;
-
 struct pthread_args{
     int k;
     int thread_id;
@@ -84,25 +82,19 @@ void *parallel_compute(void* pthread_args){
     int left = k+1 + bounds.first;
     int right = k+1 + bounds.second;
 
-    for(int ind=left; ind<right; ind++){
-        L[ind][k] = (temp_A[ind][k]*1.0)/U[k][k];
-        U[k][ind] = temp_A[k][ind];
-        l[ind] = L[ind][k];
-        u[ind] = U[k][ind];
-    }
-
-    pthread_barrier_wait(&barrier_1);
-
     for(int i=left; i<right; i++){
+        L[i][k] = temp_A[i][k]/U[k][k];
+        U[k][i] = temp_A[k][i];
+        double x = (temp_A[i][k]/U[k][k]);
         for(int j=k+1; j<N; j+=8){
-            temp_A[i][j] -= l[i]*u[j];
-            if(j+1 < N) temp_A[i][j+1] -= l[i]*u[j+1];
-            if(j+2 < N) temp_A[i][j+2] -= l[i]*u[j+2];
-            if(j+3 < N) temp_A[i][j+3] -= l[i]*u[j+3];
-            if(j+4 < N) temp_A[i][j+4] -= l[i]*u[j+4];
-            if(j+5 < N) temp_A[i][j+5] -= l[i]*u[j+5];
-            if(j+6 < N) temp_A[i][j+6] -= l[i]*u[j+6];
-            if(j+7 < N) temp_A[i][j+7] -= l[i]*u[j+7];
+            temp_A[i][j] -= (x*temp_A[k][j]);
+            if(j+1<N) temp_A[i][j+1] -= (x*temp_A[k][j+1]);
+            if(j+2<N) temp_A[i][j+2] -= (x*temp_A[k][j+2]);
+            if(j+3<N) temp_A[i][j+3] -= (x*temp_A[k][j+3]);
+            if(j+4<N) temp_A[i][j+4] -= (x*temp_A[k][j+4]);
+            if(j+5<N) temp_A[i][j+5] -= (x*temp_A[k][j+5]);
+            if(j+6<N) temp_A[i][j+6] -= (x*temp_A[k][j+6]);
+            if(j+7<N) temp_A[i][j+7] -= (x*temp_A[k][j+7]);
         }
     }
     
@@ -147,8 +139,6 @@ void LUdecompose(){
         #ifdef TIMING
         auto inner_start_time = chrono::high_resolution_clock::now();
         #endif
-
-        pthread_barrier_init(&barrier_1, NULL, PTHREAD_COUNT);
 
         for(int num = 0; num < PTHREAD_COUNT; num++){
             args[num].k = k;
@@ -235,5 +225,5 @@ int main(){
     inputMatrix();
     initOutputs();
     LUdecompose();
-    // verifyLU();
+    verifyLU();
 }

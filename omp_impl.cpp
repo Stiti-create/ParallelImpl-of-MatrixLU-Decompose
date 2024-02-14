@@ -101,19 +101,12 @@ void LUdecompose()
         swap(pi[k], pi[temp_k]);
         swap(temp_A[k], temp_A[temp_k]);
 
+        #pragma omp parallel for num_threads(PTHREAD_COUNT) schedule(static) 
         for (int i = 0; i < k; i++)
         {
             swap(L[k][i], L[temp_k][i]);
         }
         
-        #pragma omp parallel for num_threads(PTHREAD_COUNT) schedule(static) if (N - k - 1 > 100)
-        for (int i = k + 1; i < N; i++)     
-        {
-            L[i][k] = temp_A[i][k] / U[k][k];
-            U[k][i] = temp_A[k][i];
-            l[i] = L[i][k];
-            u[i] = U[k][i]; 
-        }
         #ifdef TIMING
         auto inner_start_time = chrono::high_resolution_clock::now();
         #endif
@@ -121,17 +114,20 @@ void LUdecompose()
         #pragma omp parallel for num_threads(PTHREAD_COUNT) schedule(static) if (N - k - 1 > 100)
         for (int i = k + 1; i < N; i++)
         {
+            L[i][k] = temp_A[i][k] / U[k][k];
+            U[k][i] = temp_A[k][i];
+            double x = (temp_A[i][k]/U[k][k]);
             // #pragma omp simd aligned(l, u: 32)
             for (int j = k + 1; j < N; j+=8)
             {
-                temp_A[i][j] -= l[i]*u[j];
-                if(j+1 < N) temp_A[i][j+1] -= l[i]*u[j+1];
-                if(j+2 < N) temp_A[i][j+2] -= l[i]*u[j+2];
-                if(j+3 < N) temp_A[i][j+3] -= l[i]*u[j+3];
-                if(j+4 < N) temp_A[i][j+4] -= l[i]*u[j+4];
-                if(j+5 < N) temp_A[i][j+5] -= l[i]*u[j+5];
-                if(j+6 < N) temp_A[i][j+6] -= l[i]*u[j+6];
-                if(j+7 < N) temp_A[i][j+7] -= l[i]*u[j+7];
+                temp_A[i][j] -= (x*temp_A[k][j]);
+                if(j+1 < N) temp_A[i][j+1] -= (x*temp_A[k][j+1]);
+                if(j+2 < N) temp_A[i][j+2] -= (x*temp_A[k][j+2]);
+                if(j+3 < N) temp_A[i][j+3] -= (x*temp_A[k][j+3]);
+                if(j+4 < N) temp_A[i][j+4] -= (x*temp_A[k][j+4]);
+                if(j+5 < N) temp_A[i][j+5] -= (x*temp_A[k][j+5]);
+                if(j+6 < N) temp_A[i][j+6] -= (x*temp_A[k][j+6]);
+                if(j+7 < N) temp_A[i][j+7] -= (x*temp_A[k][j+7]);
 
             }
         }
@@ -224,5 +220,5 @@ int main()
     inputMatrix();
     initOutputs();
     LUdecompose();
-    // verifyLU();
+    verifyLU();
 }

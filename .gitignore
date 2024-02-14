@@ -1,0 +1,15 @@
+*.txt
+*.out
+*.data
+*.data.old
+
+logs
+
+.vscode
+
+sequential
+pth_impl
+omp_impl
+
+test.cpp
+

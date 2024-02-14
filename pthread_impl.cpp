@@ -6,17 +6,17 @@
 #include "constants.h"
 using namespace std;
 
-vector<int> pi(N, 0);
-vector<vector<double>> A(N, vector<double>(N, 0.0));
-vector<vector<double>> L(N, vector<double>(N, 0.0));
-vector<vector<double>> U(N, vector<double>(N, 0.0));
-vector<vector<int>> P(N, vector<int>(N, 0));
-vector<vector<double>> PA(N, vector<double>(N, 0.0));
-vector<vector<double>> LU(N, vector<double>(N, 0.0));
-vector<vector<double>> residual(N, vector<double>(N, 0.0));
-vector<vector<double>> temp_A(N, vector<double>(N, 0.0));
-pthread_mutex_t lock_1;
-pthread_mutex_t lock_2;
+int pi[N];
+int P[N][N];
+double A[N][N];
+double L[N][N], U[N][N];
+double* temp_A[N];
+double PA[N][N];
+double LU[N][N];
+double residual[N][N];
+double l[N], u[N];
+
+pthread_barrier_t barrier_1;
 
 struct pthread_args{
     int k;
@@ -38,6 +38,7 @@ void inputMatrix(){
 
 void initOutputs(){
     for(int i = 0; i < N; i++){
+        temp_A[i] = (double *)malloc(N * sizeof(double));
         for(int j = 0; j < N; j++){
             U[i][j] = A[i][j];
             L[i][j] = A[i][j];
@@ -73,67 +74,53 @@ pair<int,int> getBounds(int id, int num_threads, int num_iter){
     }
 }
 
-void *parallel_swap_LU(void* pthread_args){
+void *parallel_compute(void* pthread_args){
     struct pthread_args* args = (struct pthread_args*)pthread_args;
     int k = args->k;
     int temp_k = args->temp_k;
     int id = args->thread_id;
-    
-    pair<int,int> bounds_2 = getBounds(id, PTHREAD_COUNT, k);
-    int l_2 = bounds_2.first;
-    int r_2 = bounds_2.second;
-    for(int j=l_2; j<r_2; j++){
-        swap(L[k][j], L[temp_k][j]);
-    }
-    #ifdef DEBUG
-        ofstream fout;
-        fout.open(DEBUG_OUT_FILE, ios::app);
-        fout << "Thread " << id  << " k: " << k << " l_2: " << l_2 << " r_2: " << r_2 << endl;
-    #endif
 
-    pair<int,int> bounds_3 = getBounds(id, PTHREAD_COUNT, N-k-1);
-    int l_3 = k+1 + bounds_3.first;
-    int r_3 = k+1 + bounds_3.second;
-    
-    #ifdef DEBUG
-        ofstream fout;
-        fout.open(DEBUG_OUT_FILE, ios::app);
-        fout << "Thread " << id  << " k: " << k << " l_3: " << l_3 << " r_3: " << r_3 << endl;
-    #endif
+    pair<int,int> bounds = getBounds(id, PTHREAD_COUNT, N-k-1);
+    int left = k+1 + bounds.first;
+    int right = k+1 + bounds.second;
 
-    for(int ind=l_3; ind<r_3; ind++){
+    for(int ind=left; ind<right; ind++){
         L[ind][k] = (temp_A[ind][k]*1.0)/U[k][k];
         U[k][ind] = temp_A[k][ind];
+        l[ind] = L[ind][k];
+        u[ind] = U[k][ind];
     }
-    
-    pthread_exit(NULL);
-}
 
-void *parallel_compute_A(void * pthread_args){
-    struct pthread_args* args = (struct pthread_args*)pthread_args;
-    int k = args->k;
-    int id = args->thread_id;
+    pthread_barrier_wait(&barrier_1);
 
-    pair<int,int> bounds_3 = getBounds(id, PTHREAD_COUNT, N-k-1);
-    int l_3 = k+1 + bounds_3.first;
-    int r_3 = k+1 + bounds_3.second;
-
-    for(int ind=l_3; ind<r_3; ind++){
-        L[ind][k] = (temp_A[ind][k]*1.0)/U[k][k];
-        U[k][ind] = temp_A[k][ind];
-    }
-    for(int i=l_3; i<r_3; i++){
-        for(int j=k+1; j<N; j++){
-            temp_A[i][j] -= L[i][k]*U[k][j];
+    for(int i=left; i<right; i++){
+        for(int j=k+1; j<N; j+=8){
+            temp_A[i][j] -= l[i]*u[j];
+            if(j+1 < N) temp_A[i][j+1] -= l[i]*u[j+1];
+            if(j+2 < N) temp_A[i][j+2] -= l[i]*u[j+2];
+            if(j+3 < N) temp_A[i][j+3] -= l[i]*u[j+3];
+            if(j+4 < N) temp_A[i][j+4] -= l[i]*u[j+4];
+            if(j+5 < N) temp_A[i][j+5] -= l[i]*u[j+5];
+            if(j+6 < N) temp_A[i][j+6] -= l[i]*u[j+6];
+            if(j+7 < N) temp_A[i][j+7] -= l[i]*u[j+7];
         }
     }
     
     pthread_exit(NULL);
-} 
+}
+ 
 
 void LUdecompose(){
+    ofstream fout;
+
+    #ifdef TIMING
+    fout.open(DEBUG_OUT_FILE_3, ios::app);
+    double total_A_time = 0.0;
+    #endif
+
     pthread_args args[PTHREAD_COUNT];
     pthread_t threads[PTHREAD_COUNT];
+
     auto start_time = chrono::high_resolution_clock::now();
     for (int k=0; k<N; k++){
         double maxi = 0.0;
@@ -144,44 +131,60 @@ void LUdecompose(){
                 temp_k = i;
             }
         }
+        #ifdef DEBUG
         if(maxi == 0.0){
             perror("Singular matrix");
         }
+        #endif
         U[k][k] = temp_A[temp_k][k];
         swap(pi[k], pi[temp_k]);
         swap(temp_A[k], temp_A[temp_k]);
+
+        for(int i=0; i<k; i++){
+            swap(L[k][i], L[temp_k][i]);
+        }
+
+        #ifdef TIMING
+        auto inner_start_time = chrono::high_resolution_clock::now();
+        #endif
+
+        pthread_barrier_init(&barrier_1, NULL, PTHREAD_COUNT);
 
         for(int num = 0; num < PTHREAD_COUNT; num++){
             args[num].k = k;
             args[num].thread_id = num;
             args[num].temp_k = temp_k;
-            pthread_create(&threads[num], NULL, &parallel_swap_LU, (void*)&args[num]);
-        }
-
-        for(int num = 0; num < PTHREAD_COUNT; num++){
-            pthread_join(threads[num], NULL);
-        }
-
-        for(int num = 0; num < PTHREAD_COUNT; num++){
-            args[num].k = k;
-            args[num].thread_id = num;
-            pthread_create(&threads[num], NULL, &parallel_compute_A, (void*)&args[num]);
+            pthread_create(&threads[num], NULL, &parallel_compute, (void*)&args[num]);
         }
         for (int num = 0; num < PTHREAD_COUNT; num++){
             pthread_join(threads[num], NULL);
         }
+        #ifdef TIMING
+        auto inner_end_time = chrono::high_resolution_clock::now();
+        
+        double inner_time_taken = chrono::duration_cast<chrono::nanoseconds>(inner_end_time - inner_start_time).count();
+        total_A_time += inner_time_taken;
+        
+        fout << "Inner Parallel Time: " << inner_time_taken << " ns\n" << endl;
+        #endif
     }
 
-    // can be done parallelly in future, let it be sequential for now
+    #ifdef TIMING
+        fout << "Total A Time: " << total_A_time << " ns" << endl;
+        fout.close();
+    #endif
+
     for(int i=0; i<N; i++){
         P[i][pi[i]] = 1;
     }
     auto end_time = chrono::high_resolution_clock::now();
     double time_taken = chrono::duration_cast<chrono::milliseconds>(end_time - start_time).count();
-    ofstream fout;
     fout.open(LOG_OUT_FILE, ios::app);
     fout << "-----------------------------------------------\n";
-    fout << "N: " << N << ", Parallel (pthread): " << time_taken << " ms" << endl;
+    fout << "N=" << N << ", Pthreads,"<< " Threads=" <<PTHREAD_COUNT <<", " << time_taken << " ms" << endl;
+    #ifdef TIMING
+    fout << "Total A update time PTH: " << total_A_time << " ns" << endl;
+    #endif
     fout.close();
     return;
 }
@@ -232,5 +235,5 @@ int main(){
     inputMatrix();
     initOutputs();
     LUdecompose();
-    verifyLU();
+    // verifyLU();
 }

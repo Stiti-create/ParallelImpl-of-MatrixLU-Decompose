@@ -57,8 +57,10 @@ void initOutputs(){
 
 void LUdecompose(){
     ofstream fout;
-    // fout.open(DEBUG_OUT_FILE_2, ios::app);
+    #ifdef TIMING
+    fout.open(DEBUG_OUT_FILE_2, ios::app);
     double total_A_time = 0.0;
+    #endif
     auto start_time = chrono::high_resolution_clock::now();
     for (int k=0; k<N; k++){
         double maxi = 0.0;
@@ -69,9 +71,11 @@ void LUdecompose(){
                 temp_k = i;
             }
         }
+        #ifdef DEBUG
         if(maxi == 0.0){
             perror("Singular matrix");
         }
+        #endif
         U[k][k] = temp_A[temp_k][k];
         swap(pi[k], pi[temp_k]);
         swap(temp_A[k], temp_A[temp_k]);
@@ -82,20 +86,25 @@ void LUdecompose(){
             L[i][k] = (temp_A[i][k]*1.0)/U[k][k];
             U[k][i] = temp_A[k][i];
         }
-        // auto start_A_time = chrono::high_resolution_clock::now();
+        #ifdef TIMING
+        auto start_A_time = chrono::high_resolution_clock::now();
+        #endif
         for(int i=k+1; i<N; i++){
             for(int j=k+1; j<N; j++){
                 temp_A[i][j] -= L[i][k]*U[k][j];
             }
         }
-        // auto end_A_time = chrono::high_resolution_clock::now();
-        // double time_taken_A = chrono::duration_cast<chrono::nanoseconds>(end_A_time - start_A_time).count();
-        // total_A_time += time_taken_A;
-        // fout << "A time: " << time_taken_A << " ns" << endl;
+        #ifdef TIMING
+        auto end_A_time = chrono::high_resolution_clock::now();
+        double time_taken_A = chrono::duration_cast<chrono::nanoseconds>(end_A_time - start_A_time).count();
+        total_A_time += time_taken_A;
+        fout << "A time: " << time_taken_A << " ns" << endl;
+        #endif
     }
-
-    // fout << "Total A time: " << total_A_time << " ns" << endl;
-    // fout.close();
+    #ifdef TIMING
+    fout << "Total A time: " << total_A_time << " ns" << endl;
+    fout.close();
+    #endif
     for(int i=0; i<N; i++){
         P[i][pi[i]] = 1;
     }
@@ -104,7 +113,10 @@ void LUdecompose(){
     double time_taken = chrono::duration_cast<chrono::milliseconds>(end_time - start_time).count();
     fout.open(LOG_OUT_FILE, ios::app);
     fout << "-----------------------------------------------\n";
-    fout << "N: " << N << ", Sequential: " << time_taken << " ms" << endl;
+    fout << "N=" << N << ", Sequential,"<< " Threads=1, " << time_taken << " ms" << endl;
+    #ifdef TIMING
+    fout << "Total A update time SEQ: " << total_A_time << " ns" << endl;
+    #endif
     fout.close();
     return;
 }

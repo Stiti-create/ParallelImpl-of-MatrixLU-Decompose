@@ -6,18 +6,11 @@
 #include <omp.h>
 using namespace std;
 
-// vector<int> pi(N, 0);
-vector<vector<double>> A(N, vector<double>(N, 0.0));
-// vector<vector<double>> L(N, vector<double>(N, 0.0));
-// vector<vector<double>> U(N, vector<double>(N, 0.0));
-// vector<vector<int>> P(N, vector<int>(N, 0));
-vector<vector<double>> PA(N, vector<double>(N, 0.0));
-vector<vector<double>> LU(N, vector<double>(N, 0.0));
-vector<vector<double>> residual(N, vector<double>(N, 0.0));
-// double temp_A[N][N];
-// vector<vector<double>> temp_A(N, vector<double>(N, 0.0));
+double A[N][N];
+double PA[N][N];
+double LU[N][N];
+double residual[N][N];
 double *temp_A[N];
-double *fake_A[N];
 double l[N], u[N];
 double L[N][N], U[N][N];
 int P[N][N];
@@ -45,13 +38,11 @@ void initOutputs()
     for (int i = 0; i < N; i++)
     {
         temp_A[i] = (double *)malloc(N * sizeof(double));
-        // fake_A[i] = (double *)malloc(N * sizeof(double));
         for (int j = 0; j < N; j++)
         {
             U[i][j] = A[i][j];
             L[i][j] = A[i][j];
             temp_A[i][j] = A[i][j];
-            // fake_A[i][j] = A[i][j];
         }
     }
     for (int i = 0; i < N; i++)
@@ -78,8 +69,12 @@ void initOutputs()
 void LUdecompose()
 {
     ofstream fout;
-    // fout.open(DEBUG_OUT_FILE, ios::app);
+
+    #ifdef TIMING
+    fout.open(DEBUG_OUT_FILE, ios::app);
     double total_A_time = 0.0;
+    #endif
+    
     auto start_time = chrono::high_resolution_clock::now();
     for (int k = 0; k < N; k++)
     {
@@ -95,17 +90,17 @@ void LUdecompose()
                 temp_k = i;
             }
         }
-
-        // if (maxi == 0.0)
-        // {
-        //     perror("Singular matrix");
-        // }
+        #ifdef DEBUG
+        if (maxi == 0.0)
+        {
+            perror("Singular matrix");
+        }
+        #endif
         
         U[k][k] = temp_A[temp_k][k];
         swap(pi[k], pi[temp_k]);
         swap(temp_A[k], temp_A[temp_k]);
-        // THIS MIGHT CREATE OVERHEAD
-        // #pragma omp parallel for num_threads(PTHREAD_COUNT) schedule(static)
+
         for (int i = 0; i < k; i++)
         {
             swap(L[k][i], L[temp_k][i]);
@@ -119,7 +114,10 @@ void LUdecompose()
             l[i] = L[i][k];
             u[i] = U[k][i]; 
         }
-        // auto inner_start_time = chrono::high_resolution_clock::now();
+        #ifdef TIMING
+        auto inner_start_time = chrono::high_resolution_clock::now();
+        #endif
+
         #pragma omp parallel for num_threads(PTHREAD_COUNT) schedule(static) if (N - k - 1 > 100)
         for (int i = k + 1; i < N; i++)
         {
@@ -137,7 +135,7 @@ void LUdecompose()
 
             }
         }
-        #ifdef DEBUG
+        #ifdef TIMING
         auto inner_end_time = chrono::high_resolution_clock::now();
         
         double inner_time_taken = chrono::duration_cast<chrono::nanoseconds>(inner_end_time - inner_start_time).count();
@@ -147,7 +145,7 @@ void LUdecompose()
         #endif
     }
 
-    #ifdef DEBUG
+    #ifdef TIMING
         fout << "Total A Time: " << total_A_time << " ns" << endl;
         fout.close();
     #endif
@@ -162,8 +160,10 @@ void LUdecompose()
     double time_taken = chrono::duration_cast<chrono::milliseconds>(end_time - start_time).count();
     fout.open(LOG_OUT_FILE, ios::app);
     fout << "-----------------------------------------------\n";
-    fout << "N: " << N << ", Parallel(OpenMP): " << time_taken << " ms" << endl;
-    // fout << "Total swap time seq: " << total_A_time << " ns" << endl;
+    fout << "N=" << N << ", OpenMP,"<< " Threads=" << PTHREAD_COUNT <<", " << time_taken << " ms" << endl;
+    #ifdef TIMING
+    fout << "Total A update time in OMP: " << total_A_time << " ns" << endl;
+    #endif
     fout.close();
     return;
 }

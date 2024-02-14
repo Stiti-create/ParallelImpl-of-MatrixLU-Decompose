@@ -4,6 +4,7 @@
 #include <time.h>
 #include "constants.h"
 #include <omp.h>
+#include <cstdlib>
 using namespace std;
 
 double A[N][N];
@@ -11,7 +12,8 @@ double PA[N][N];
 double LU[N][N];
 double residual[N][N];
 double *temp_A[N];
-double l[N], u[N];
+double* l;
+double* u;
 double L[N][N], U[N][N];
 int P[N][N];
 int pi[N];
@@ -19,6 +21,8 @@ int pi[N];
 
 void inputMatrix()
 {
+    posix_memalign(reinterpret_cast<void**>(&l), CACHE_LINE_SIZE, sizeof(double) * N);
+    posix_memalign(reinterpret_cast<void**>(&u), CACHE_LINE_SIZE, sizeof(double) * N);
     ifstream fin;
     fin.open(INPUT_MATRIX_FILE);
     for (int i = 0; i < N; i++)
@@ -38,6 +42,11 @@ void initOutputs()
     for (int i = 0; i < N; i++)
     {
         temp_A[i] = (double *)malloc(N * sizeof(double));
+        size_t alignedSize = N * sizeof(double);
+
+        if (posix_memalign(reinterpret_cast<void**>(&temp_A[i]), CACHE_LINE_SIZE, alignedSize) != 0) {
+            std::cerr << "Failed to allocate memory with cache alignment\n";
+        }
         for (int j = 0; j < N; j++)
         {
             U[i][j] = A[i][j];
@@ -74,7 +83,7 @@ void LUdecompose()
     fout.open(DEBUG_OUT_FILE, ios::app);
     double total_A_time = 0.0;
     #endif
-    
+
     auto start_time = chrono::high_resolution_clock::now();
     for (int k = 0; k < N; k++)
     {
@@ -106,33 +115,35 @@ void LUdecompose()
             swap(L[k][i], L[temp_k][i]);
         }
         
-        #pragma omp parallel for num_threads(PTHREAD_COUNT) schedule(static) if (N - k - 1 > 100)
+        #pragma omp parallel for num_threads(PTHREAD_COUNT) schedule(static) 
         for (int i = k + 1; i < N; i++)     
-        {
-            L[i][k] = temp_A[i][k] / U[k][k];
-            U[k][i] = temp_A[k][i];
-            l[i] = L[i][k];
-            u[i] = U[k][i]; 
+        {      
+            double a = temp_A[i][k] / U[k][k];
+            double b = temp_A[k][i];     
+            U[k][i] = a;
+            L[i][k] = b;
+            l[i] = b;
+            u[i] = a; 
         }
+
         #ifdef TIMING
         auto inner_start_time = chrono::high_resolution_clock::now();
         #endif
-
-        #pragma omp parallel for num_threads(PTHREAD_COUNT) schedule(static) if (N - k - 1 > 100)
+        #pragma omp parallel for num_threads(PTHREAD_COUNT) 
         for (int i = k + 1; i < N; i++)
         {
             // #pragma omp simd aligned(l, u: 32)
+            double a = 0;
             for (int j = k + 1; j < N; j+=8)
             {
-                temp_A[i][j] -= l[i]*u[j];
-                if(j+1 < N) temp_A[i][j+1] -= l[i]*u[j+1];
-                if(j+2 < N) temp_A[i][j+2] -= l[i]*u[j+2];
-                if(j+3 < N) temp_A[i][j+3] -= l[i]*u[j+3];
-                if(j+4 < N) temp_A[i][j+4] -= l[i]*u[j+4];
-                if(j+5 < N) temp_A[i][j+5] -= l[i]*u[j+5];
-                if(j+6 < N) temp_A[i][j+6] -= l[i]*u[j+6];
-                if(j+7 < N) temp_A[i][j+7] -= l[i]*u[j+7];
-
+                temp_A[i][j] -= l[i] * u[j];
+                if(j+1 < N) temp_A[i][j+1] -= l[i] * u[j+1];
+                if(j+2 < N) temp_A[i][j+2] -= l[i] * u[j+2];
+                if(j+3 < N) temp_A[i][j+3] -= l[i] * u[j+3];
+                if(j+4 < N) temp_A[i][j+4] -= l[i] * u[j+4];
+                if(j+5 < N) temp_A[i][j+5] -= l[i] * u[j+5];
+                if(j+6 < N) temp_A[i][j+6] -= l[i] * u[j+6];
+                if(j+7 < N) temp_A[i][j+7] -= l[i] * u[j+7];
             }
         }
         #ifdef TIMING
@@ -141,7 +152,7 @@ void LUdecompose()
         double inner_time_taken = chrono::duration_cast<chrono::nanoseconds>(inner_end_time - inner_start_time).count();
         total_A_time += inner_time_taken;
         
-        fout << "Inner Parallel Time: " << inner_time_taken << " ns\n" << endl;
+        // fout << "Inner Parallel Time: " << inner_time_taken << " ns\n" << endl;
         #endif
     }
 

@@ -98,7 +98,7 @@ void LUdecompose(){
         auto end_A_time = chrono::high_resolution_clock::now();
         double time_taken_A = chrono::duration_cast<chrono::nanoseconds>(end_A_time - start_A_time).count();
         total_A_time += time_taken_A;
-        fout << "A time: " << time_taken_A << " ns" << endl;
+        // fout << "A time: " << time_taken_A << " ns" << endl;
         #endif
     }
     #ifdef TIMING

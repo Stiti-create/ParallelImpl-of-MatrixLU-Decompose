@@ -82,16 +82,15 @@ void LUdecompose(){
         for(int i=0; i<k; i++){
             swap(L[k][i], L[temp_k][i]);
         }
-        for(int i=k+1; i<N; i++){
-            L[i][k] = (temp_A[i][k]*1.0)/U[k][k];
-            U[k][i] = temp_A[k][i];
-        }
         #ifdef TIMING
         auto start_A_time = chrono::high_resolution_clock::now();
         #endif
         for(int i=k+1; i<N; i++){
-            for(int j=k+1; j<N; j++){
-                temp_A[i][j] -= L[i][k]*U[k][j];
+            L[i][k] = temp_A[i][k]/U[k][k];
+            U[k][i] = temp_A[k][i];
+            double x = (temp_A[i][k]/U[k][k]);
+            for(int j=k+1; j<N; j+=1){
+                temp_A[i][j] -= (x*temp_A[k][j]);
             }
         }
         #ifdef TIMING

@@ -3,6 +3,7 @@
 #include <chrono>
 #include <time.h>
 #include <pthread.h>
+#include <random>
 #include "constants.h"
 using namespace std;
 
@@ -23,15 +24,16 @@ struct pthread_args{
 };
 
 void inputMatrix(){
-    ifstream fin;
-    fin.open(INPUT_MATRIX_FILE);
-    for(int i = 0; i < N; i++){
-        for(int j = 0; j < N; j++){
-            fin >> A[i][j];
-            if(fin.eof()) break;
+    random_device rd;
+    default_random_engine generator(rd());
+    uniform_real_distribution<double> distribution(0.0, 1.0);
+    for (int i = 0; i < N; i++)
+    {
+        for (int j = 0; j < N; j++)
+        {
+            A[i][j] = distribution(generator);
         }
     }
-    fin.close();
 }
 
 void initOutputs(){
@@ -225,5 +227,5 @@ int main(){
     inputMatrix();
     initOutputs();
     LUdecompose();
-    // verifyLU();
+    verifyLU();
 }

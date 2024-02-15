@@ -1,15 +1,8 @@
 all:
-	rm -f matrix_gen sequential
-	rm -f matrix.txt debug.txt
-	g++ matrix_gen.cpp -o matrix_gen
-	./matrix_gen
+	rm -f sequential omp_impl pth_impl
 	g++ sequential.cpp -o sequential
-	./sequential
-
-gen:
-	rm -f matrix_gen matrix.txt
-	g++ matrix_gen.cpp -o matrix_gen
-	./matrix_gen
+	g++ omp_impl.cpp -o omp_impl -fopenmp
+	g++ pthread_impl.cpp -o pth_impl -lpthread
 
 seq:
 	g++ sequential.cpp -o sequential 
@@ -26,7 +19,7 @@ debug:
 
 clean:
 	rm -f debug.txt debug_lu_verify.txt
-	rm -f matrix_gen sequential pth_impl omp_impl
+	rm -f sequential pth_impl omp_impl
 
 
 

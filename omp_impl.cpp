@@ -2,6 +2,7 @@
 #include <fstream>
 #include <chrono>
 #include <time.h>
+#include <random>
 #include "constants.h"
 #include <omp.h>
 using namespace std;
@@ -21,18 +22,16 @@ void inputMatrix()
 {
     posix_memalign(reinterpret_cast<void**>(&l), CACHE_LINE_SIZE, sizeof(double) * N);
     posix_memalign(reinterpret_cast<void**>(&u), CACHE_LINE_SIZE, sizeof(double) * N);
-    ifstream fin;
-    fin.open(INPUT_MATRIX_FILE);
+    random_device rd;
+    default_random_engine generator(rd());
+    uniform_real_distribution<double> distribution(0.0, 1.0);
     for (int i = 0; i < N; i++)
     {
         for (int j = 0; j < N; j++)
         {
-            fin >> A[i][j];
-            if (fin.eof())
-                break;
+            A[i][j] = distribution(generator);
         }
     }
-    fin.close();
 }
 
 void initOutputs()
@@ -231,5 +230,5 @@ int main()
     inputMatrix();
     initOutputs();
     LUdecompose();
-    // verifyLU();
+    verifyLU();
 }

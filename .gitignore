@@ -13,3 +13,7 @@ omp_impl
 
 test.cpp
 
+perf-reports/*
+perf-report/*
+
+

@@ -5,30 +5,26 @@
 #include "constants.h"
 using namespace std;
 
-// vector<int> pi(N, 0);
 vector<vector<double>> A(N, vector<double>(N, 0.0));
-// vector<vector<double>> L(N, vector<double>(N, 0.0));
-// vector<vector<double>> U(N, vector<double>(N, 0.0));
-// vector<vector<int>> P(N, vector<int>(N, 0));
 vector<vector<double>> PA(N, vector<double>(N, 0.0));
 vector<vector<double>> LU(N, vector<double>(N, 0.0));
 vector<vector<double>> residual(N, vector<double>(N, 0.0));
 double temp_A[N][N];
-// vector<vector<double>> temp_A(N, vector<double>(N, 0.0));
 double L[N][N], U[N][N];
 int P[N][N];
 int pi[N];
 
 void inputMatrix(){
-    ifstream fin;
-    fin.open(INPUT_MATRIX_FILE);
-    for(int i = 0; i < N; i++){
-        for(int j = 0; j < N; j++){
-            fin >> A[i][j];
-            if(fin.eof()) break;
+    random_device rd;
+    default_random_engine generator(rd());
+    uniform_real_distribution<double> distribution(0.0, 1.0);
+    for (int i = 0; i < N; i++)
+    {
+        for (int j = 0; j < N; j++)
+        {
+            A[i][j] = distribution(generator);
         }
     }
-    fin.close();
 }
 
 void initOutputs(){
@@ -167,5 +163,5 @@ int main(){
     inputMatrix();
     initOutputs();
     LUdecompose();
-    // verifyLU();
+    verifyLU();
 }

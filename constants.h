@@ -8,4 +8,5 @@
 #define LOG_OUT_FILE "log.txt"
 #define PTHREAD_COUNT 8
 // #define DEBUG 1
-#define TIMING 1
+// #define TIMING 1
+#define CACHE_LINE_SIZE 64

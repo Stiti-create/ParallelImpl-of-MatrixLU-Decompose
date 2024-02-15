@@ -7,9 +7,9 @@
 using namespace std;
 
 double A[N][N];
-double PA[N][N];
-double LU[N][N];
-double residual[N][N];
+vector<vector<double>> PA(N, vector<double>(N, 0.0));
+vector<vector<double>> LU(N, vector<double>(N, 0.0));
+vector<vector<double>> residual(N, vector<double>(N, 0.0));
 double *temp_A[N];
 double l[N], u[N];
 double L[N][N], U[N][N];
@@ -19,6 +19,8 @@ int pi[N];
 
 void inputMatrix()
 {
+    posix_memalign(reinterpret_cast<void**>(&l), CACHE_LINE_SIZE, sizeof(double) * N);
+    posix_memalign(reinterpret_cast<void**>(&u), CACHE_LINE_SIZE, sizeof(double) * N);
     ifstream fin;
     fin.open(INPUT_MATRIX_FILE);
     for (int i = 0; i < N; i++)
@@ -38,6 +40,11 @@ void initOutputs()
     for (int i = 0; i < N; i++)
     {
         temp_A[i] = (double *)malloc(N * sizeof(double));
+        size_t alignedSize = N * sizeof(double);
+
+        if (posix_memalign(reinterpret_cast<void**>(&temp_A[i]), CACHE_LINE_SIZE, alignedSize) != 0) {
+            std::cerr << "Failed to allocate memory with cache alignment\n";
+        }
         for (int j = 0; j < N; j++)
         {
             U[i][j] = A[i][j];
@@ -106,7 +113,7 @@ void LUdecompose()
             swap(L[k][i], L[temp_k][i]);
         }
         
-        #pragma omp parallel for num_threads(PTHREAD_COUNT) schedule(static) if (N - k - 1 > 100)
+        #pragma omp parallel for num_threads(PTHREAD_COUNT) schedule(guided) if (N - k - 1 > 100)
         for (int i = k + 1; i < N; i++)     
         {
             L[i][k] = temp_A[i][k] / U[k][k];
@@ -118,7 +125,7 @@ void LUdecompose()
         auto inner_start_time = chrono::high_resolution_clock::now();
         #endif
 
-        #pragma omp parallel for num_threads(PTHREAD_COUNT) schedule(static) if (N - k - 1 > 100)
+        #pragma omp parallel for num_threads(PTHREAD_COUNT) schedule(guided) if (N - k - 1 > 100)
         for (int i = k + 1; i < N; i++)
         {
             // #pragma omp simd aligned(l, u: 32)
